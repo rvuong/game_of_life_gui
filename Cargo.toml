@@ -1,0 +1,30 @@
+[package]
+name = "game-of-life"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+egui        = "0.29"
+egui-winit  = "0.29"
+egui-wgpu   = "0.29"
+egui_plot   = "0.29"
+image       = { version = "0.25", default-features = false, features = ["png"] }
+log         = "0.4"
+wgpu        = { version = "22", features = ["webgpu", "webgl"] }
+winit       = { version = "0.30", features = ["rwh_06"] }
+web-time    = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger  = "0.11"
+pollster    = "0.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen         = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys              = { version = "0.3", features = ["Window", "Document", "HtmlCanvasElement", "Navigator"] }
+console_error_panic_hook = "0.1"
+console_log          = "1"
+getrandom            = { version = "0.2", features = ["js"] }

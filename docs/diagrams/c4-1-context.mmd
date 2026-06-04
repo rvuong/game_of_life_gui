@@ -1,0 +1,13 @@
+C4Context
+    title C1 — System Context: Game of Life
+
+    Person(player, "Player", "Edits a toroidal cell grid, loads preset patterns, launches the simulation, and reviews the final score")
+
+    System(gol, "Game of Life", "Rust desktop application — edit mode, Conway simulation, cycle detection, post-game scoring")
+
+    System_Ext(os_gpu, "OS / GPU Driver", "Provides a native window, keyboard and mouse input events, and a hardware-accelerated render surface (Vulkan / Metal / DX12 / GL via winit + wgpu)")
+
+    Rel(player, gol, "Keyboard shortcuts and mouse clicks")
+    Rel(gol, os_gpu, "Window events inbound; GPU command submission outbound")
+
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")

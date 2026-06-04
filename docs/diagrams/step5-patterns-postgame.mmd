@@ -1,0 +1,57 @@
+%% Step 5 — Preset patterns and post-game display
+%% Files: src/sim/patterns.rs (new), src/app.rs (end screen), Cargo.toml (+egui_plot)
+%% Import into Lucid: Insert > Import Data > Mermaid
+
+graph TD
+
+    subgraph new_dep ["New Cargo.toml dependency"]
+        EguiPlot["egui_plot = 0.29\n────────────────\nPlot::new(id)\nLine::new(PlotPoints)\nPlotPoints::from_iter"]
+    end
+
+    subgraph patterns_mod ["src/sim/patterns.rs  (new file)"]
+        direction TB
+
+        PatternDef["PatternDef (struct)\n────────────────\nname: &'static str\ncells: &'static [(i32, i32)]\ndescription: &'static str"]
+
+        Consts["Pattern constants\n────────────────────────────────\nBLOCK      — 4 cells, still life\nBLINKER    — 3 cells, period-2\nGLIDER     — 5 cells, travels diag.\nPULSAR     — 48 cells, period-3\nR_PENTOMINO — 5 cells, chaotic"]
+
+        PRESETS["PRESETS: &[PatternDef]\nSlice of all 5 pattern definitions\nwith name + description"]
+
+        place_fn["place(pattern: &[(i32,i32)], grid: &mut Grid)\n────────────────────────────────\n1. grid.clear()\n2. cx = grid.width / 2, cy = grid.height / 2\n3. For each (dx,dy):\n     x = (cx+dx).rem_euclid(w)\n     y = (cy+dy).rem_euclid(h)\n     grid.set(x, y, true)"]
+
+        PatternDef --> Consts
+        Consts --> PRESETS
+    end
+
+    subgraph app_editing ["src/app.rs  — Editing panel addition"]
+        PresetButtons["Preset buttons\nfor preset in PRESETS:\n  button(preset.name)\n  .on_hover_text(preset.description)\n  → place(preset.cells, &mut self.grid)"]
+    end
+
+    subgraph app_ended ["src/app.rs  — AppPhase::Ended rendering"]
+        direction TB
+
+        EndScreen["CentralPanel — Game Over screen\n────────────────────────────────\nHeading: 'Game Over'\nReason text (CycleDetected / CapReached)\nSteps: N\nUnique states: sqrt(score)-1\nScore: N  (heading)"]
+
+        PopGraph["Population graph\n────────────────────────────────\npopulation_history\n  → enumerate()\n  → PlotPoints([step, count])\n  → Line::new(points)\n  → Plot::new('pop_graph').height(200)\n  → plot_ui.line(line)"]
+
+        PlayAgain["▶ Play again button\n→ grid.clear()\n→ game_session = None\n→ phase = Editing"]
+
+        EndScreen --> PopGraph
+        EndScreen --> PlayAgain
+    end
+
+    subgraph sim_grid ["src/sim/mod.rs  (called by place)"]
+        Grid3["Grid\nclear()  +  set(x, y, true)"]
+    end
+
+    subgraph end_state ["EndState  (produced in Step 4)"]
+        ES["reason: GameResult\nscore: u64\npopulation_history: Vec&lt;u32&gt;\nstep_count: u32"]
+    end
+
+    PRESETS -->|"iterated in"| PresetButtons
+    PresetButtons -->|"calls"| place_fn
+    place_fn -->|"mutates"| Grid3
+
+    ES -->|"drives"| EndScreen
+    ES -->|"population_history →"| PopGraph
+    EguiPlot -->|"Plot + Line + PlotPoints"| PopGraph

@@ -1,0 +1,54 @@
+%% Step 1 — Grid storage and Conway's rules
+%% File: src/sim/mod.rs
+%% Import into Lucid: Insert > Import Data > Mermaid
+
+graph LR
+
+    subgraph std ["std (no external crates)"]
+        VecBool["Vec&lt;bool&gt;"]
+        RemEuclid["i32::rem_euclid"]
+    end
+
+    subgraph sim ["src/sim/mod.rs"]
+        direction TB
+
+        Grid["Grid\n────────────────\npub width: usize\npub height: usize\npub(crate) cells: Vec&lt;bool&gt;"]
+
+        subgraph constructors ["Construction"]
+            new["new(width, height) → Grid\nAllocates flat Vec, all false"]
+        end
+
+        subgraph accessors ["Cell Access  (toroidal)"]
+            get["get(x: i32, y: i32) → bool\nidx = y·w + x  after rem_euclid"]
+            set["set(x: usize, y: usize, alive: bool)"]
+            toggle["toggle(x: usize, y: usize)"]
+            clear["clear()  →  cells.fill(false)"]
+        end
+
+        subgraph logic ["Simulation Logic"]
+            count_nb["count_neighbours(x, y) → u8\nChecks 8 directional offsets via get()"]
+            tick["tick()\nApplies Conway's 4 rules\nmatches!((alive, n), (true,2)|(true,3)|(false,3))\nReplaces cells with next generation"]
+        end
+
+        subgraph metrics ["Metrics"]
+            cell_count["cell_count() → usize\nwidth × height"]
+            live_count["live_cell_count() → u32\ncells.iter().filter(alive).count()"]
+        end
+    end
+
+    VecBool  -->|"flat storage\nidx = y·w + x"| Grid
+    RemEuclid -->|"wraps negative coords\ne.g. -1 mod 20 = 19"| get
+
+    Grid --> new
+    Grid --> get
+    Grid --> set
+    Grid --> toggle
+    Grid --> clear
+    Grid --> count_nb
+    Grid --> tick
+    Grid --> cell_count
+    Grid --> live_count
+
+    tick -->|"reads each cell's state"| get
+    tick -->|"counts live neighbours"| count_nb
+    count_nb -->|"8 offset lookups"| get

@@ -1,0 +1,49 @@
+%% Step 2 — Cycle detection and scoring
+%% Files: src/sim/mod.rs (Hash impl), src/sim/session.rs
+%% Import into Lucid: Insert > Import Data > Mermaid
+
+graph LR
+
+    subgraph std ["std (no external crates)"]
+        HashSet["HashSet&lt;u64&gt;"]
+        DefaultHasher["DefaultHasher\nstd::collections::hash_map"]
+        HashTrait["Hash trait\nstd::hash"]
+    end
+
+    subgraph sim_mod ["src/sim/mod.rs"]
+        Grid["Grid\n+width +height +cells"]
+        GridHash["impl Hash for Grid\nhashes: width, height, cells"]
+        Grid --- GridHash
+    end
+
+    subgraph session ["src/sim/session.rs"]
+        direction TB
+
+        hash_grid["hash_grid(grid: &Grid) → u64\nPrivate fn:\ngrid.hash(DefaultHasher) → u64"]
+
+        GameResult{{"GameResult (enum)\n──────────────\nStillRunning\nCycleDetected\nCapReached"}}
+
+        GameSession["GameSession\n────────────────────\npub grid: Grid\npub population_history: Vec&lt;u32&gt;\npub step_count: u32\npub max_steps: u32\n────────────────────\n- seen_hashes: HashSet&lt;u64&gt;"]
+
+        new_session["new(grid, max_steps) → Self\n1. hash initial grid state\n2. insert hash into seen_hashes\n3. record initial population"]
+
+        advance["advance() → GameResult\n1. grid.tick()\n2. step_count += 1\n3. if step_count >= max_steps → CapReached\n4. hash new state\n5. if hash in seen_hashes → CycleDetected\n6. else insert hash, push population → StillRunning"]
+
+        score["score() → u64\n(seen_hashes.len() + 1)²"]
+
+        GameSession --> new_session
+        GameSession --> advance
+        GameSession --> score
+    end
+
+    GridHash -->|"implements"| HashTrait
+    HashTrait -->|"used by"| hash_grid
+    DefaultHasher -->|"instantiated in"| hash_grid
+    hash_grid -->|"produces u64 key"| HashSet
+
+    Grid -->|"owned by"| GameSession
+    HashSet -->|"stores seen states"| GameSession
+    hash_grid -->|"called in"| new_session
+    hash_grid -->|"called in"| advance
+    advance -->|"returns"| GameResult
+    advance -->|"calls"| Grid

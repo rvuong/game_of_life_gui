@@ -1,0 +1,27 @@
+C4Component
+    title C3 — Component: game-of-life binary
+
+    Container_Boundary(bin, "game-of-life binary") {
+
+        Component(main_rs, "Entry Point", "src/main.rs", "Initialises env_logger, creates winit EventLoop, instantiates App, calls event_loop.run_app()")
+
+        Component(app_rs, "App Shell", "src/app.rs — App / AppInner", "Implements winit ApplicationHandler. Manages window lifecycle. Routes WindowEvents to egui or AppAction. Drives one egui pass per RedrawRequested. Requests continuous redraws via about_to_wait. [Steps 3-5: will own AppPhase, Grid, GameSession, timer]")
+
+        Component(input_rs, "Input Handler", "src/input.rs — AppAction", "Translates winit PhysicalKey::Code into high-level AppActions (Quit, ToggleFullscreen, ExitFullscreen). Keeps platform key codes isolated from application logic.")
+
+        Component(renderer, "Renderer", "src/render/mod.rs — Renderer", "Owns wgpu Instance / Surface / Device / Queue. Configures swap-chain (sRGB preferred, AutoVsync). Each frame: updates egui textures, uploads geometry, clears to dark background, runs egui_wgpu render pass, presents frame. [Step 3: will also draw the cell grid via egui Painter]")
+
+        Component(sim_grid, "Grid", "src/sim/mod.rs — Grid", "Toroidal flat-array cell grid (Vec<bool>). get/set/toggle with rem_euclid wrapping, count_neighbours (8-direction), tick() applying all four Conway rules, live_cell_count, clear. Implements std::hash::Hash.")
+
+        Component(sim_session, "Game Session", "src/sim/session.rs — GameSession", "Wraps Grid. Hashes each post-tick state into HashSet<u64>; returns CycleDetected on first repeat. Returns CapReached when step_count >= max_steps. Records population_history. Score = (unique_states + 1)^2.")
+
+        Component(int_tests, "Integration Tests", "tests/sim_tests.rs", "Crate-level tests that import game_of_life::sim::Grid without pulling in wgpu or winit, keeping the simulation layer testable in isolation.")
+    }
+
+    Rel(main_rs, app_rs, "Instantiates App; calls event_loop.run_app()")
+    Rel(app_rs, input_rs, "Constructs AppAction from KeyboardInput events")
+    Rel(app_rs, renderer, "Calls Renderer::render() and resize() each frame")
+    Rel(sim_session, sim_grid, "Owns Grid; calls Grid::tick() and Grid::hash() on each advance()")
+    Rel(int_tests, sim_grid, "Exercises Grid in isolation (no GPU dependency)")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

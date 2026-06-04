@@ -1,0 +1,77 @@
+%% Step 3 — Grid rendering and cell editing
+%% Files: src/app.rs, src/render/mod.rs
+%% Import into Lucid: Insert > Import Data > Mermaid
+
+graph TD
+
+    subgraph winit ["winit 0.30  (windowing + events)"]
+        WE_Cursor["WindowEvent::CursorMoved\n{ position: PhysicalPosition }"]
+        WE_Mouse["WindowEvent::MouseInput\n{ button: Left, state: Pressed }"]
+        WE_Redraw["WindowEvent::RedrawRequested"]
+        WE_Resize["WindowEvent::Resized"]
+    end
+
+    subgraph egui_lib ["egui 0.29  (immediate-mode GUI)"]
+        EguiPainter["egui::Painter\nrect_filled(rect, rounding, color)"]
+        EguiUi["egui::Ui\navailable_size(), cursor()"]
+        EguiSidePanel["egui::SidePanel::left()\nButton / Slider widgets"]
+        EguiPos2["egui::Pos2  (origin point)"]
+        EguiColor32["egui::Color32\nRGB(220,220,220) alive\nRGB(30,30,30) dead"]
+    end
+
+    subgraph wgpu_lib ["wgpu 22  (GPU backend — pre-existing)"]
+        Renderer["Renderer\n(unchanged from scaffold)"]
+    end
+
+    subgraph app ["src/app.rs"]
+        direction TB
+
+        AppPhase{{"AppPhase (enum)\n──────────────\nEditing\nRunning\nEnded(EndState)"}}
+
+        EndState["EndState\n────────────\nreason: GameResult\nscore: u64\npopulation_history: Vec&lt;u32&gt;\nstep_count: u32"]
+
+        screen_to_cell["screen_to_cell(\n  mouse_x, mouse_y,\n  origin_x, origin_y,\n  cell_size,\n  grid_w, grid_h\n) → Option&lt;(usize, usize)&gt;\nPure fn — no side effects"]
+
+        AppInner["AppInner  (extended)\n────────────────────────\n+ grid: Grid\n+ phase: AppPhase\n+ game_session: Option&lt;GameSession&gt;\n+ max_steps: u32\n+ grid_origin: Pos2\n+ grid_cell_size: f32\n+ last_mouse_pos: Pos2\n────────────────────────\n  window, renderer, egui_ctx, egui_state"]
+
+        StartBtn["▶ Start button\n→ GameSession::new(grid.clone(), max_steps)\n→ phase = Running"]
+        RestartBtn["⟳ Restart button\n→ grid.clear()\n→ game_session = None\n→ phase = Editing"]
+        SizeBtn["20×20 / 40×40 / 60×60\n→ grid = Grid::new(w, h)"]
+    end
+
+    subgraph render ["src/render/mod.rs"]
+        draw_grid["draw_grid(ui: &mut Ui, grid: &Grid)\n  → (Pos2, f32)\n────────────────────────────────\n1. Compute cell_size from available area\n2. Centre grid in panel\n3. For each cell: painter.rect_filled()\n4. Return (origin, cell_size)"]
+    end
+
+    subgraph sim_layer ["src/sim/  (read-only from this step)"]
+        Grid2["Grid\ntoggle(col, row)\nclear()"]
+        GameSession2["GameSession"]
+    end
+
+    WE_Cursor -->|"updates"| AppInner
+    WE_Mouse -->|"triggers"| screen_to_cell
+    screen_to_cell -->|"col, row → toggle"| Grid2
+    WE_Redraw -->|"calls render()"| AppInner
+    WE_Resize -->|"resize surface"| Renderer
+
+    AppInner -->|"passes &grid + &mut ui"| draw_grid
+    draw_grid -->|"draws cells via"| EguiPainter
+    draw_grid -->|"measures space via"| EguiUi
+    draw_grid -->|"cell color from"| EguiColor32
+    draw_grid -->|"returns (origin, cell_size)"| AppInner
+    AppInner -->|"stores grid_origin, grid_cell_size"| EguiPos2
+
+    AppInner --> StartBtn
+    AppInner --> RestartBtn
+    AppInner --> SizeBtn
+    StartBtn -->|"creates"| GameSession2
+    StartBtn -->|"transitions"| AppPhase
+    RestartBtn -->|"transitions"| AppPhase
+    AppPhase -->|"Ended wraps"| EndState
+    SizeBtn -->|"replaces"| Grid2
+
+    EguiSidePanel -->|"hosts buttons"| StartBtn
+    EguiSidePanel -->|"hosts buttons"| RestartBtn
+    EguiSidePanel -->|"hosts buttons"| SizeBtn
+
+    AppInner -->|"tessellates + submits"| Renderer

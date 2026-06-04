@@ -1,0 +1,15 @@
+C4Container
+    title C2 — Container: Game of Life
+
+    Person_Ext(player, "Player", "Runs the native desktop binary")
+
+    System_Boundary(sys, "Game of Life") {
+        Container(binary, "game-of-life", "Rust binary — single process", "Owns the winit event loop, wgpu GPU surface, egui UI layer, and the entire simulation state machine")
+    }
+
+    System_Ext(os_gpu, "OS / GPU", "Supplies native window, VSync-paced frame presentation, and hardware rendering via the wgpu backend chosen at runtime")
+
+    Rel(player, binary, "Keyboard & mouse")
+    Rel(binary, os_gpu, "wgpu: surface creation, command-buffer submission, frame present")
+
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")

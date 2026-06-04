@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#111111" />
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Game of Life" />
+
+  <title>Game of Life</title>
+  <link rel="manifest" href="manifest.json" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #111;
+      overflow: hidden;
+      /* Prevent elastic scroll bounce on iOS revealing the background */
+      overscroll-behavior: none;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      /* Prevent context menu on long press */
+      -webkit-touch-callout: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas" data-trunk-id="game-canvas"></canvas>
+
+  <!-- Trunk injects the WASM loader here -->
+  <link data-trunk rel="rust" data-wasm-opt="z" />
+  <link data-trunk rel="copy-file" href="manifest.json" />
+  <link data-trunk rel="copy-file" href="sw.js" />
+
+  <script>
+    // Register service worker for offline PWA support.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js');
+      });
+    }
+
+    // On iOS, resize the canvas to the visual viewport to avoid the
+    // address bar offset when the page first loads.
+    function fitCanvas() {
+      const canvas = document.getElementById('game-canvas');
+      if (!canvas) return;
+      const vv = window.visualViewport;
+      if (vv) {
+        canvas.style.width  = vv.width  + 'px';
+        canvas.style.height = vv.height + 'px';
+      }
+    }
+    window.visualViewport?.addEventListener('resize', fitCanvas);
+    window.addEventListener('load', fitCanvas);
+  </script>
+</body>
+</html>

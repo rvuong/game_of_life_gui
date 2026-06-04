@@ -1,0 +1,60 @@
+%% Step 4 — Game loop and speed control
+%% File: src/app.rs  (about_to_wait + UI additions)
+%% Import into Lucid: Insert > Import Data > Mermaid
+
+graph TD
+
+    subgraph std_time ["std::time  (no external crates)"]
+        Instant["Instant\n::now()  /  .elapsed()"]
+        Duration["Duration\n::from_millis(ms)"]
+    end
+
+    subgraph winit_cb ["winit 0.30  (event loop callback)"]
+        AboutToWait["ApplicationHandler::\nabout_to_wait()\nFires after all events are drained"]
+    end
+
+    subgraph egui_widgets ["egui 0.29  (widgets)"]
+        Slider["egui::Slider\n50..=2000 ms  logarithmic\n100..=10000 steps  logarithmic"]
+        Labels["ui.label()\nStep counter  +  live cell count"]
+    end
+
+    subgraph app ["src/app.rs  — AppInner  (extended)"]
+        direction TB
+
+        TimerFields["New timer fields\n────────────────────\nlast_tick: Instant\nstep_duration: Duration"]
+
+        TickLogic["about_to_wait logic\n────────────────────────────────────\nif phase == Running:\n  if last_tick.elapsed() >= step_duration:\n    last_tick = Instant::now()\n    result = session.advance()\n    match result → update phase\nwindow.request_redraw()"]
+
+        PhaseTransition{{"GameResult → AppPhase\n──────────────────────\nStillRunning  →  Running (no-op)\nCycleDetected →  Ended(EndState)\nCapReached    →  Ended(EndState)"}}
+
+        EndStateBuilder["EndState built on game end\n────────────────────────\nreason: result\nscore: session.score()\npopulation_history: cloned\nstep_count: session.step_count"]
+
+        SpeedSlider["Speed slider (Running panel)\nstep_duration = Duration::from_millis(ms)"]
+
+        MaxStepsSlider["Max steps slider (Editing panel)\nmax_steps: u32\npassed to GameSession::new on Start"]
+
+        RunningPanel["Running panel\nStep: N / max  +  Live cells: N\nSpeed slider  +  Restart button"]
+    end
+
+    subgraph sim_layer ["src/sim/session.rs  (called here)"]
+        Advance["GameSession::advance()\n→ GameResult"]
+        Score["GameSession::score() → u64"]
+        PopHistory["session.population_history\nVec&lt;u32&gt;  cloned into EndState"]
+    end
+
+    Instant -->|"stamps last_tick"| TimerFields
+    Duration -->|"configures step_duration"| TimerFields
+
+    AboutToWait -->|"triggers each frame"| TickLogic
+    TickLogic -->|"calls when elapsed"| Advance
+    Advance -->|"returns"| PhaseTransition
+    PhaseTransition -->|"on CycleDetected / CapReached"| EndStateBuilder
+    EndStateBuilder -->|"reads"| Score
+    EndStateBuilder -->|"reads"| PopHistory
+
+    Slider -->|"speed slider"| SpeedSlider
+    Slider -->|"max steps slider"| MaxStepsSlider
+    Labels -->|"rendered in"| RunningPanel
+    SpeedSlider -->|"updates step_duration"| TimerFields
+    RunningPanel -->|"hosts"| SpeedSlider
+    RunningPanel -->|"hosts"| Labels

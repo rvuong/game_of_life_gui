@@ -1,0 +1,44 @@
+%% C4 — Code level (Mermaid has no C4Code type; classDiagram is used)
+%% Scope: simulation layer (src/sim/) — the only fully-implemented layer so far.
+
+classDiagram
+    direction TB
+
+    class Grid {
+        +usize width
+        +usize height
+        +Vec~bool~ cells
+        +new(width usize, height usize) Grid
+        +get(x i32, y i32) bool
+        +set(x usize, y usize, alive bool)
+        +toggle(x usize, y usize)
+        +tick()
+        +count_neighbours(x usize, y usize) u8
+        +live_cell_count() u32
+        +clear()
+        +hash(state Hasher)
+    }
+    note for Grid "Toroidal wrapping via rem_euclid.\ntick() allocates one next-gen Vec per call.\nHash covers width + height + cells so\ndifferent-sized grids never collide."
+
+    class GameSession {
+        +Grid grid
+        -HashSet~u64~ seen_hashes
+        +Vec~u32~ population_history
+        +u32 step_count
+        +u32 max_steps
+        +new(grid Grid, max_steps u32) GameSession
+        +advance() GameResult
+        +score() u64
+    }
+    note for GameSession "Constructor seeds seen_hashes with the\ninitial state hash and records the\ninitial live_cell_count in population_history.\nscore = (|seen_hashes| + 1)^2"
+
+    class GameResult {
+        <<enumeration>>
+        StillRunning
+        CycleDetected
+        CapReached
+    }
+    note for GameResult "advance() checks CapReached before the\nhash lookup, so a cycle at the cap\ncounts as CapReached, not CycleDetected."
+
+    GameSession "1" *-- "1" Grid : owns
+    GameSession ..> GameResult : advance() returns
