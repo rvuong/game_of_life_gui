@@ -1,0 +1,10 @@
+FROM rust:slim
+
+RUN rustup target add wasm32-unknown-unknown \
+ && cargo install trunk --locked
+
+WORKDIR /app
+
+EXPOSE 8080
+
+CMD ["trunk", "serve", "--address", "0.0.0.0"]
